@@ -1,5 +1,8 @@
 package com.android.player;
 
+import android.graphics.ImageFormat;
+import android.graphics.Rect;
+import android.media.Image;
 import android.media.MediaCodec;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
@@ -165,9 +168,14 @@ public class VideoDecode extends Thread{
             } else if (decoderStatus >= 0) {
                 boolean doRender = (mBufferInfo.size != 0);
                 if (doRender) {
+                    /*
                     ByteBuffer buffer = decoder.getOutputBuffer(decoderStatus);
                     byte[] bytes = new byte[buffer.remaining()];
                     buffer.get(bytes);
+                     */
+                    Image image = decoder.getOutputImage(decoderStatus);
+                    byte[] bytes = getDataFromImage(image);
+
                     injectCamera(bytes);
                     playFrame.doFrame(bytes);
                 }
@@ -182,6 +190,94 @@ public class VideoDecode extends Thread{
             }
         }
         playFrame.playFinish();
+    }
+
+    /**
+     * Get a byte array image data from an Image object.
+     * <p>
+     * Read data from all planes of an Image into a contiguous unpadded,
+     * unpacked 1-D linear byte array, such that it can be write into disk, or
+     * accessed by software conveniently. It supports YUV_420_888/NV21/YV12
+     * input Image format.
+     * </p>
+     * <p>
+     * For YUV_420_888/NV21/YV12/Y8/Y16, it returns a byte array that contains
+     * the Y plane data first, followed by U(Cb), V(Cr) planes if there is any
+     * (xstride = width, ystride = height for chroma and luma components).
+     * </p>
+     */
+    private static byte[] getDataFromImage(Image image) {
+        Rect crop = image.getCropRect();
+        int format = image.getFormat();
+        int width = crop.width();
+        int height = crop.height();
+        int rowStride, pixelStride;
+        byte[] data = null;
+
+        // Read image data
+        Image.Plane[] planes = image.getPlanes();
+
+        // Check image validity
+        switch (format) {
+            case ImageFormat.YUV_420_888:
+                Log.d(TAG, "image fmt: YUV_420_888");
+                break;
+            case ImageFormat.NV21:
+                Log.d(TAG, "image fmt: NV21");
+                break;
+            case ImageFormat.YV12:
+                Log.d(TAG, "image fmt: YV12");
+                break;
+            default:
+                Log.e(TAG, "Unsupported Image Format: " + format);
+                return null;
+        }
+        if (((format == ImageFormat.YUV_420_888) || (format == ImageFormat.NV21)
+                ||(format == ImageFormat.YV12)) && (planes.length != 3)) {
+            Log.e(TAG, "YUV420 format Images should have 3 planes");
+            return null;
+        }
+
+        ByteBuffer buffer = null;
+
+        int offset = 0;
+        data = new byte[width * height * ImageFormat.getBitsPerPixel(format) / 8];
+        Log.d(TAG,"deocde image w:"+width+", h:"+height+", bitppxl:"+ImageFormat.getBitsPerPixel(format));
+        byte[] rowData = new byte[planes[0].getRowStride()];
+        for (int i = 0; i < planes.length; i++) {
+            int shift = (i == 0) ? 0 : 1;
+            buffer = planes[i].getBuffer();
+            rowStride = planes[i].getRowStride();
+            pixelStride = planes[i].getPixelStride();
+            // For multi-planar yuv images, assuming yuv420 with 2x2 chroma subsampling.
+            int w = crop.width() >> shift;
+            int h = crop.height() >> shift;
+            buffer.position(rowStride * (crop.top >> shift) + pixelStride * (crop.left >> shift));
+            for (int row = 0; row < h; row++) {
+                int bytesPerPixel = ImageFormat.getBitsPerPixel(format) / 8;
+                int length;
+                if (pixelStride == bytesPerPixel) {
+                    // Special case: optimized read of the entire row
+                    length = w * bytesPerPixel;
+                    buffer.get(data, offset, length);
+                    offset += length;
+                } else {
+                    // Generic case: should work for any pixelStride but slower.
+                    // Use intermediate buffer to avoid read byte-by-byte from
+                    // DirectByteBuffer, which is very bad for performance
+                    length = (w - 1) * pixelStride + bytesPerPixel;
+                    buffer.get(rowData, 0, length);
+                    for (int col = 0; col < w; col++) {
+                        data[offset++] = rowData[col * pixelStride];
+                    }
+                }
+                // Advance buffer the remainder of the row stride
+                if (row < h - 1) {
+                    buffer.position(buffer.position() + rowStride - length);
+                }
+            }
+        }
+        return data;
     }
 
     private boolean injectCamera(byte[] bytes) {
