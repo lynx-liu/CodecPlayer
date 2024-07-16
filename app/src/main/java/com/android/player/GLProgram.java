@@ -164,12 +164,14 @@ public class GLProgram {
                     "uniform sampler2D textureV;\n" +
                     "varying vec2 vTextureCoord;\n" +
                     "void main() {\n" +
-                    "   vec4 c = vec4((texture2D(textureY, vTextureCoord).r - 16./255.) * 1.164);\n" +
-                    "   vec4 U = vec4(texture2D(textureU, vTextureCoord).r - 128./255.);\n" +
-                    "   vec4 V = vec4(texture2D(textureV, vTextureCoord).r - 128./255.);\n" +
-                    "   c += V * vec4(1.596, -0.813, 0, 0);\n" +
-                    "   c += U * vec4(0, -0.392, 2.017, 0);\n" +
-                    "   c.a = 1.0;\n" +
-                    "   gl_FragColor = c;\n" +
+                    "   float y = texture2D(textureY, vTextureCoord).r - 0.0625;\n" +
+                    "   float u = texture2D(textureU, vTextureCoord).r - 0.5;\n" +
+                    "   float v = texture2D(textureV, vTextureCoord).r - 0.5;\n" +
+                    "   \n" +
+                    "   float R = y + v *  1.596;\n" +
+                    "   float G = y + (u * -0.392) + v * -0.813;\n" +
+                    "   float B = y + u *  2.017;\n" +
+                    "   \n" +
+                    "   gl_FragColor = vec4(R, G, B, 1.0);"+
                     "}\n";
 }
