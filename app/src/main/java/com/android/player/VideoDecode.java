@@ -183,7 +183,7 @@ public class VideoDecode extends Thread{
                 decoder.releaseOutputBuffer(decoderStatus, doRender);
 
                 if (((mBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) && mLoop) {
-                    Log.d(TAG, "Reached EOS, looping");
+                    //Log.d(TAG, "Reached EOS, looping");
                     extractor.seekTo(0, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
                     decoder.flush();    // reset decoder state
                 }
@@ -220,29 +220,23 @@ public class VideoDecode extends Thread{
         // Check image validity
         switch (format) {
             case ImageFormat.YUV_420_888:
-                Log.d(TAG, "image fmt: YUV_420_888");
-                break;
             case ImageFormat.NV21:
-                Log.d(TAG, "image fmt: NV21");
-                break;
             case ImageFormat.YV12:
-                Log.d(TAG, "image fmt: YV12");
+                if (planes.length != 3) {
+                    Log.e(TAG, "YUV420 format Images should have 3 planes");
+                    return null;
+                }
                 break;
             default:
                 Log.e(TAG, "Unsupported Image Format: " + format);
                 return null;
-        }
-        if (((format == ImageFormat.YUV_420_888) || (format == ImageFormat.NV21)
-                ||(format == ImageFormat.YV12)) && (planes.length != 3)) {
-            Log.e(TAG, "YUV420 format Images should have 3 planes");
-            return null;
         }
 
         ByteBuffer buffer = null;
 
         int offset = 0;
         data = new byte[width * height * ImageFormat.getBitsPerPixel(format) / 8];
-        Log.d(TAG,"deocde image w:"+width+", h:"+height+", bitppxl:"+ImageFormat.getBitsPerPixel(format));
+        //Log.d(TAG,"decode image w:"+width+", h:"+height+", bitppxl:"+ImageFormat.getBitsPerPixel(format));
         byte[] rowData = new byte[planes[0].getRowStride()];
         for (int i = 0; i < planes.length; i++) {
             int shift = (i == 0) ? 0 : 1;
