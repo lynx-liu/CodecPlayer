@@ -176,8 +176,10 @@ public class VideoDecode extends Thread{
                     Image image = decoder.getOutputImage(decoderStatus);
                     byte[] bytes = getDataFromImage(image);
 
-                    injectCamera(bytes);
-                    playFrame.doFrame(bytes);
+                    if(bytes!=null) {
+                        injectCamera(bytes);
+                        playFrame.doFrame(bytes);
+                    }
                 }
 
                 decoder.releaseOutputBuffer(decoderStatus, doRender);

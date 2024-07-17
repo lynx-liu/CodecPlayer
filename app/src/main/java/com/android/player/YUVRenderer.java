@@ -16,6 +16,7 @@ public class YUVRenderer implements Renderer {
     private GLProgram prog = new GLProgram();
     private int mScreenWidth, mScreenHeight;
     private int mVideoWidth, mVideoHeight;
+    private static final int mScale = 2;
     private ByteBuffer yData;
     private ByteBuffer uData;
     private ByteBuffer vData;
@@ -72,9 +73,9 @@ public class YUVRenderer implements Renderer {
                 }
             }
 
-            this.mVideoWidth = width;
-            this.mVideoHeight = height;
-            int yarraySize = width * height;
+            this.mVideoWidth = width * mScale;
+            this.mVideoHeight = height * mScale;
+            int yarraySize = mVideoWidth * mVideoHeight;
             int uvarraySize = yarraySize / 4;
             synchronized (this) {
                 yData = ByteBuffer.allocate(yarraySize);
@@ -91,9 +92,24 @@ public class YUVRenderer implements Renderer {
             yData.clear();
             uData.clear();
             vData.clear();
-            yData.put(yuvData, 0, yData.capacity());
-            uData.put(yuvData, yData.capacity(), uData.capacity());
-            vData.put(yuvData, yData.capacity()+uData.capacity(), vData.capacity());
+
+            int yarraySize = width * height;
+            int uvarraySize = yarraySize>>2;
+            int halfWidth = width>>1;
+            int halfHeight = height>>1;
+
+            for(int i=0;i<height;i++) {
+                yData.put(yuvData, i*width, width);
+                yData.position(i*width*mScale);
+
+                if(i<halfHeight) {
+                    uData.put(yuvData, yarraySize+i*halfWidth, halfWidth);
+                    uData.position(i*halfWidth*mScale);
+
+                    vData.put(yuvData, yarraySize + uvarraySize+i*halfWidth, halfWidth);
+                    vData.position(i*halfWidth*mScale);
+                }
+            }
         }
 
         // request to render
