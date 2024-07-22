@@ -28,7 +28,7 @@ public class MainActivity extends Activity {
         GLSurfaceView surfaceView= new GLSurfaceView(this);
         setContentView(surfaceView);
 
-        videoPlayer =new VideoPlayer(this, surfaceView);
+        videoPlayer =new VideoPlayer(surfaceView);
         videoPlayer.start();
     }
 

@@ -13,10 +13,10 @@ public class VideoPlayer implements VideoDecode.PlayVideo {
     private VideoDecode mVideoDecode;
     private YUVRenderer glRenderer;
 
-    public VideoPlayer(Context context, GLSurfaceView surfaceView) {
+    public VideoPlayer(GLSurfaceView surfaceView) {
         surfaceView.setEGLContextClientVersion(2);
 
-        glRenderer = new YUVRenderer(surfaceView, getDM(context));
+        glRenderer = new YUVRenderer(surfaceView);
         surfaceView.setRenderer(glRenderer);
 
         mVideoDecode=new VideoDecode(this);

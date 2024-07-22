@@ -3,7 +3,6 @@ package com.android.player;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.GLSurfaceView.Renderer;
-import android.util.DisplayMetrics;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
@@ -20,10 +19,8 @@ public class YUVRenderer implements Renderer {
     private ByteBuffer uData;
     private ByteBuffer vData;
 
-    public YUVRenderer(GLSurfaceView surface, DisplayMetrics dm) {
+    public YUVRenderer(GLSurfaceView surface) {
         mTargetSurface = surface;
-        mScreenWidth = dm.widthPixels;
-        mScreenHeight = dm.heightPixels;
     }
 
     @Override
@@ -35,6 +32,7 @@ public class YUVRenderer implements Renderer {
 
     @Override
     public void onSurfaceChanged(GL10 gl, int width, int height) {
+        mScreenWidth = width; mScreenHeight = height;
         GLES20.glViewport(0, 0, width, height);
     }
 
