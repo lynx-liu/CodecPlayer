@@ -6,6 +6,7 @@ import android.util.Log;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 
 public class GLProgram {
     private int mProgram;
@@ -21,6 +22,12 @@ public class GLProgram {
     private int videoHeight = -1;
     private static final int SIZEOF_FLOAT = 4;
 
+    private int mSharpHandle;
+    private int mTextureSizeHandle;
+    private float mSharpLevel = 5.0f;
+    private float[] textureSize;
+    private FloatBuffer TEXTURE_SIZE;
+
     public boolean isProgramBuilt() {
         return mProgram>0;
     }
@@ -35,12 +42,18 @@ public class GLProgram {
         yuvHandle[0] = GLES20.glGetUniformLocation(mProgram, "textureY");
         yuvHandle[1] = GLES20.glGetUniformLocation(mProgram, "textureU");
         yuvHandle[2] = GLES20.glGetUniformLocation(mProgram, "textureV");
+
+        mSharpHandle = GLES20.glGetUniformLocation(mProgram, "sharpLevel");
+        mTextureSizeHandle = GLES20.glGetUniformLocation(mProgram, "mTextureSize");
     }
 
     public void buildTextures(Buffer[] yuvData, int width, int height) {
         if (width != videoWidth || height != videoHeight) {
             videoWidth = width;
             videoHeight = height;
+
+            textureSize = new float[]{width,height};
+            TEXTURE_SIZE = createFloatBuffer(textureSize);
 
             if (mTextureID[0] >= 0) {
                 GLES20.glDeleteTextures(mTextureID.length, mTextureID, 0);
@@ -50,11 +63,15 @@ public class GLProgram {
 
         for(int i=0;i<yuvData.length;i++) {
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextureID[i]);
-            GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE,
-                    i==0?videoWidth:videoWidth/2, i==0?videoHeight:videoHeight/2, 0,
-                    GLES20.GL_LUMINANCE, GLES20.GL_UNSIGNED_BYTE, yuvData[i]);
-            GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
-            GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+            if(i==0) {
+                GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE, videoWidth, videoHeight, 0, GLES20.GL_LUMINANCE, GLES20.GL_UNSIGNED_BYTE, yuvData[i]);
+                GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
+                GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+            } else {
+                GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE, videoWidth / 2, videoHeight / 2, 0, GLES20.GL_LUMINANCE, GLES20.GL_UNSIGNED_BYTE, yuvData[i]);
+                GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
+                GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST);
+            }
             GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
             GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
         }
@@ -76,6 +93,8 @@ public class GLProgram {
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextureID[i]);
             GLES20.glUniform1i(yuvHandle[i], i);
         }
+        GLES20.glUniform1f(mSharpHandle, mSharpLevel);
+        GLES20.glUniform2fv(mTextureSizeHandle, 1, TEXTURE_SIZE);
 
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
         GLES20.glFinish();
@@ -134,6 +153,16 @@ public class GLProgram {
         }
     }
 
+    public static FloatBuffer createFloatBuffer(float[] coords) {
+        // Allocate a direct ByteBuffer, using 4 bytes per float, and copy coords into it.
+        ByteBuffer bb = ByteBuffer.allocateDirect(coords.length * SIZEOF_FLOAT);
+        bb.order(ByteOrder.nativeOrder());
+        FloatBuffer fb = bb.asFloatBuffer();
+        fb.put(coords);
+        fb.position(0);
+        return fb;
+    }
+
     static float[] squareVertices = {
             -1.0f, -1.0f,
             1.0f, -1.0f,
@@ -163,15 +192,37 @@ public class GLProgram {
                     "uniform sampler2D textureU;\n" +
                     "uniform sampler2D textureV;\n" +
                     "varying vec2 vTextureCoord;\n" +
+                    "uniform vec2 mTextureSize;\n"+
+                    "uniform float sharpLevel;\n"+
                     "void main() {\n" +
-                    "   float y = texture2D(textureY, vTextureCoord).r;\n" +
-                    "   float u = texture2D(textureU, vTextureCoord).r;\n" +
-                    "   float v = texture2D(textureV, vTextureCoord).r;\n" +
-                    "   \n" +
-                    "   float R = y + (v - 0.5) *  1.402;\n" +
-                    "   float G = y - ((u - 0.5) * 0.3441) - (v - 0.5) * 0.7141;\n" +
-                    "   float B = y + (u - 0.5) *  1.772;\n" +
-                    "   \n" +
-                    "   gl_FragColor = vec4(R, G, B, 1.0);"+
+                    "    float xx = float(mTextureSize.x);\n"+
+                    "    float yy = float(mTextureSize.y);\n"+
+                    "    vec2 offset0 = vec2(-1.0 / xx, -1.0 / yy);\n"+
+                    "    vec2 offset1 = vec2(0.0 / xx, -1.0 / yy);\n"+
+                    "    vec2 offset2 = vec2(1.0 / xx, -1.0 / yy);\n"+
+                    "    vec2 offset3 = vec2(-1.0 / xx, 0.0 / yy);\n"+
+                    "    vec2 offset4 = vec2(0.0 / xx, 0.0 / yy);\n"+
+                    "    vec2 offset5 = vec2(1.0 / xx, 0.0 / yy);\n"+
+                    "    vec2 offset6 = vec2(-1.0 / xx, 1.0 / yy);\n"+
+                    "    vec2 offset7 = vec2(0.0 / xx, 1.0 / yy);\n"+
+                    "    vec2 offset8 = vec2(1.0 / xx, 1.0 / yy);\n"+
+                    "    float cTemp0 = texture2D(textureY, vTextureCoord.st + offset0.xy).r;\n"+
+                    "    float cTemp1 = texture2D(textureY, vTextureCoord.st + offset1.xy).r;\n"+
+                    "    float cTemp2 = texture2D(textureY, vTextureCoord.st + offset2.xy).r;\n"+
+                    "    float cTemp3 = texture2D(textureY, vTextureCoord.st + offset3.xy).r;\n"+
+                    "    float cTemp4 = texture2D(textureY, vTextureCoord.st + offset4.xy).r;\n"+
+                    "    float cTemp5 = texture2D(textureY, vTextureCoord.st + offset5.xy).r;\n"+
+                    "    float cTemp6 = texture2D(textureY, vTextureCoord.st + offset6.xy).r;\n"+
+                    "    float cTemp7 = texture2D(textureY, vTextureCoord.st + offset7.xy).r;\n"+
+                    "    float cTemp8 = texture2D(textureY, vTextureCoord.st + offset8.xy).r;\n"+
+                    "    float y = cTemp4 + (cTemp4-(cTemp0+cTemp1+cTemp1+cTemp2+cTemp3+cTemp4+cTemp4+cTemp5+cTemp3+cTemp4+cTemp4+cTemp5+cTemp6+cTemp7+cTemp7+cTemp8)/16.0)*sharpLevel;\n"+
+                    "    float u = texture2D(textureU, vTextureCoord).r;\n" +
+                    "    float v = texture2D(textureV, vTextureCoord).r;\n" +
+                    "    \n" +
+                    "    float R = y + (v - 0.5) *  1.402;\n" +
+                    "    float G = y - ((u - 0.5) * 0.3441) - (v - 0.5) * 0.7141;\n" +
+                    "    float B = y + (u - 0.5) *  1.772;\n" +
+                    "    \n" +
+                    "    gl_FragColor = vec4(R, G, B, 1.0);"+
                     "}\n";
 }
