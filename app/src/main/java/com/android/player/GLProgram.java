@@ -194,6 +194,7 @@ public class GLProgram {
                     "varying vec2 vTextureCoord;\n" +
                     "uniform vec2 mTextureSize;\n"+
                     "uniform float sharpLevel;\n"+
+                    "const float LIMIT = 15.0/255.0;\n"+
                     "void main() {\n" +
                     "    vec2 offset0 = vec2(1.0, 1.0) / mTextureSize;\n"+
                     "    vec2 offset1 = vec2(0.0, 1.0) / mTextureSize;\n"+
@@ -208,7 +209,7 @@ public class GLProgram {
                     "    float cTemp6 = texture2D(textureY, vTextureCoord - offset2).r;\n"+
                     "    float cTemp7 = texture2D(textureY, vTextureCoord - offset1).r;\n"+
                     "    float cTemp8 = texture2D(textureY, vTextureCoord - offset0).r;\n"+
-                    "    float y = cTemp4 + (cTemp4-(cTemp0+cTemp2+cTemp6+cTemp8+(cTemp1+cTemp3+cTemp5+cTemp7)*2.0+cTemp4*4.0)/16.0)*sharpLevel;\n"+
+                    "    float y = cTemp4 + min(LIMIT, max(-LIMIT, (cTemp4-(cTemp0+cTemp2+cTemp6+cTemp8+(cTemp1+cTemp3+cTemp5+cTemp7)*2.0+cTemp4*4.0)/16.0)*sharpLevel));\n"+
                     "    float u = texture2D(textureU, vTextureCoord).r;\n" +
                     "    float v = texture2D(textureV, vTextureCoord).r;\n" +
                     "    \n" +
