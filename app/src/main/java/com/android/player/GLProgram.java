@@ -195,27 +195,20 @@ public class GLProgram {
                     "uniform vec2 mTextureSize;\n"+
                     "uniform float sharpLevel;\n"+
                     "void main() {\n" +
-                    "    float xx = float(mTextureSize.x);\n"+
-                    "    float yy = float(mTextureSize.y);\n"+
-                    "    vec2 offset0 = vec2(-1.0 / xx, -1.0 / yy);\n"+
-                    "    vec2 offset1 = vec2(0.0 / xx, -1.0 / yy);\n"+
-                    "    vec2 offset2 = vec2(1.0 / xx, -1.0 / yy);\n"+
-                    "    vec2 offset3 = vec2(-1.0 / xx, 0.0 / yy);\n"+
-                    "    vec2 offset4 = vec2(0.0 / xx, 0.0 / yy);\n"+
-                    "    vec2 offset5 = vec2(1.0 / xx, 0.0 / yy);\n"+
-                    "    vec2 offset6 = vec2(-1.0 / xx, 1.0 / yy);\n"+
-                    "    vec2 offset7 = vec2(0.0 / xx, 1.0 / yy);\n"+
-                    "    vec2 offset8 = vec2(1.0 / xx, 1.0 / yy);\n"+
-                    "    float cTemp0 = texture2D(textureY, vTextureCoord.st + offset0.xy).r;\n"+
-                    "    float cTemp1 = texture2D(textureY, vTextureCoord.st + offset1.xy).r;\n"+
-                    "    float cTemp2 = texture2D(textureY, vTextureCoord.st + offset2.xy).r;\n"+
-                    "    float cTemp3 = texture2D(textureY, vTextureCoord.st + offset3.xy).r;\n"+
-                    "    float cTemp4 = texture2D(textureY, vTextureCoord.st + offset4.xy).r;\n"+
-                    "    float cTemp5 = texture2D(textureY, vTextureCoord.st + offset5.xy).r;\n"+
-                    "    float cTemp6 = texture2D(textureY, vTextureCoord.st + offset6.xy).r;\n"+
-                    "    float cTemp7 = texture2D(textureY, vTextureCoord.st + offset7.xy).r;\n"+
-                    "    float cTemp8 = texture2D(textureY, vTextureCoord.st + offset8.xy).r;\n"+
-                    "    float y = cTemp4 + (cTemp4-(cTemp0+cTemp1+cTemp1+cTemp2+cTemp3+cTemp4+cTemp4+cTemp5+cTemp3+cTemp4+cTemp4+cTemp5+cTemp6+cTemp7+cTemp7+cTemp8)/16.0)*sharpLevel;\n"+
+                    "    vec2 offset0 = vec2(1.0, 1.0) / mTextureSize;\n"+
+                    "    vec2 offset1 = vec2(0.0, 1.0) / mTextureSize;\n"+
+                    "    vec2 offset2 = vec2(-1.0, 1.0) / mTextureSize;\n"+
+                    "    vec2 offset3 = vec2(1.0, 0.0) / mTextureSize;\n"+
+                    "    float cTemp0 = texture2D(textureY, vTextureCoord + offset0).r;\n"+
+                    "    float cTemp1 = texture2D(textureY, vTextureCoord + offset1).r;\n"+
+                    "    float cTemp2 = texture2D(textureY, vTextureCoord + offset2).r;\n"+
+                    "    float cTemp3 = texture2D(textureY, vTextureCoord + offset3).r;\n"+
+                    "    float cTemp4 = texture2D(textureY, vTextureCoord).r;\n"+
+                    "    float cTemp5 = texture2D(textureY, vTextureCoord - offset3).r;\n"+
+                    "    float cTemp6 = texture2D(textureY, vTextureCoord - offset2).r;\n"+
+                    "    float cTemp7 = texture2D(textureY, vTextureCoord - offset1).r;\n"+
+                    "    float cTemp8 = texture2D(textureY, vTextureCoord - offset0).r;\n"+
+                    "    float y = cTemp4 + (cTemp4-(cTemp0+cTemp2+cTemp6+cTemp8+(cTemp1+cTemp3+cTemp5+cTemp7)*2.0+cTemp4*4.0)/16.0)*sharpLevel;\n"+
                     "    float u = texture2D(textureU, vTextureCoord).r;\n" +
                     "    float v = texture2D(textureV, vTextureCoord).r;\n" +
                     "    \n" +
