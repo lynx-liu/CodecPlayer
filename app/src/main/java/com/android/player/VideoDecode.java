@@ -128,7 +128,7 @@ public class VideoDecode extends Thread{
         String mime = format.getString(MediaFormat.KEY_MIME);
         try {
             decoder = MediaCodec.createDecoderByType(mime);
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         decoder.configure(format, null, null, 0);

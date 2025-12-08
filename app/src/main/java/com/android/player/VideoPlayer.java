@@ -20,7 +20,7 @@ public class VideoPlayer implements VideoDecode.PlayVideo {
         surfaceView.setRenderer(glRenderer);
 
         mVideoDecode=new VideoDecode(this);
-        mVideoDecode.setSourceFile(new File("/sdcard/test.mp4"));
+        mVideoDecode.setSourceFile(new File("/sdcard/Android/data/com.android.player/cache/av1.mp4"));
     }
 
     public void start(){
